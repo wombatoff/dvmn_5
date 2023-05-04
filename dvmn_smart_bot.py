@@ -1,19 +1,27 @@
-import random
-
 import logging
 import os
+import random
 from logging.handlers import TimedRotatingFileHandler
 
-import vk_api as vk
-from vk_api.longpoll import VkLongPoll, VkEventType
-
 import telegram
+import vk_api as vk
 from environs import Env
 from google.cloud import dialogflow
 from google.oauth2 import service_account
-from telegram.ext import Updater, MessageHandler, Filters
+from vk_api.longpoll import VkLongPoll, VkEventType
 
 bot_logger = logging.getLogger(__file__)
+
+
+class TelegramLogsHandler(logging.Handler):
+    def __init__(self, tg_bot, chat_id):
+        super().__init__()
+        self.chat_id = chat_id
+        self.tg_bot = tg_bot
+
+    def emit(self, record):
+        log_entry = self.format(record)
+        self.tg_bot.send_message(chat_id=self.chat_id, text=log_entry)
 
 
 def detect_intent_texts(env, project_id, session_id, texts, language_code):
@@ -23,7 +31,7 @@ def detect_intent_texts(env, project_id, session_id, texts, language_code):
     session_client = dialogflow.SessionsClient(credentials=credentials)
 
     session = session_client.session_path(project_id, session_id)
-    print("Session path: {}\n".format(session))
+    bot_logger.info("Session path: {}\n".format(session))
 
     for text in texts:
         text_input = dialogflow.TextInput(text=text, language_code=language_code)
@@ -32,25 +40,16 @@ def detect_intent_texts(env, project_id, session_id, texts, language_code):
             request={"session": session, "query_input": query_input}
         )
 
-        print("=" * 20)
-        print("Query text: {}".format(response.query_result.query_text))
-        print(
+        bot_logger.info("Query text: {}".format(response.query_result.query_text))
+        bot_logger.info(
             "Detected intent: {} (confidence: {})\n".format(
                 response.query_result.intent.display_name,
                 response.query_result.intent_detection_confidence,
             )
         )
-        print("Fulfillment text: {}\n".format(response.query_result.fulfillment_text))
+        bot_logger.info("Fulfillment text: {}\n".format(response.query_result.fulfillment_text))
 
         return response.query_result.fulfillment_text
-
-
-def echo(event, vk_api):
-    vk_api.messages.send(
-        user_id=event.user_id,
-        message=event.text,
-        random_id=random.randint(1,1000)
-    )
 
 
 def main():
@@ -70,35 +69,53 @@ def main():
 
     telegram_token = env.str("TELEGRAM_TOKEN")
     telegram_chat_id = env.int("TELEGRAM_CHAT_ID")
-    smart_bot = telegram.Bot(token=telegram_token)
+    info_bot = telegram.Bot(token=telegram_token)
+    telegram_handler = TelegramLogsHandler(info_bot, telegram_chat_id)
+    telegram_handler.setFormatter(logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    ))
+    telegram_handler.setLevel(logging.ERROR)
+    bot_logger.addHandler(telegram_handler)
+
+    bot_logger.setLevel(logging.DEBUG)
 
     vk_token = env.str("VK_TOKEN")
     vk_session = vk.VkApi(token=vk_token)
     vk_api = vk_session.get_api()
     longpoll = VkLongPoll(vk_session)
-    for event in longpoll.listen():
-        if event.type == VkEventType.MESSAGE_NEW and event.to_me:
-            echo(event, vk_api)
 
-    def handle_message(update, context):
+    def handle_message(event, vk_api):
         try:
             project_id = env.str('GOOGLE_PROJECT_ID')
-            session_id = update.effective_chat.id
-            text = update.message.text
+            session_id = event.user_id
+            text = event.text
             language_code = 'ru'
             response_text = detect_intent_texts(env, project_id, session_id, [text], language_code)
+
             if response_text:
-                context.bot.send_message(chat_id=update.effective_chat.id, text=response_text)
+                vk_api.messages.send(
+                    user_id=event.user_id,
+                    message=response_text,
+                    random_id=random.randint(1, 1000000)
+                )
             else:
-                context.bot.send_message(chat_id=update.effective_chat.id, text="Не совсем понял.")
+                vk_api.messages.send(
+                    user_id=event.user_id,
+                    message="Не совсем понял.",
+                    random_id=random.randint(1, 1000000)
+                )
         except Exception as e:
             bot_logger.exception("An error occurred while handling the message")
-            context.bot.send_message(chat_id=update.effective_chat.id, text="Произошла ошибка при обработке сообщения.")
+            vk_api.messages.send(
+                user_id=event.user_id,
+                message="Произошла ошибка при обработке сообщения.",
+                random_id=random.randint(1, 1000000)
+            )
 
-    updater = Updater(token=telegram_token, use_context=True)
-    dispatcher = updater.dispatcher
-    dispatcher.add_handler(MessageHandler(Filters.text, handle_message))
-    updater.start_polling()
+    for event in longpoll.listen():
+        if event.type == VkEventType.MESSAGE_NEW and event.to_me:
+            handle_message(event, vk_api)
 
 
 if __name__ == "__main__":
