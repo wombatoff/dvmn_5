@@ -49,7 +49,7 @@ def detect_intent_texts(env, project_id, session_id, texts, language_code):
         )
         bot_logger.info("Fulfillment text: {}\n".format(response.query_result.fulfillment_text))
 
-        return response.query_result.fulfillment_text
+        return response.query_result
 
 
 def main():
@@ -91,20 +91,15 @@ def main():
             session_id = event.user_id
             text = event.text
             language_code = 'ru'
-            response_text = detect_intent_texts(env, project_id, session_id, [text], language_code)
+            query_result = detect_intent_texts(env, project_id, session_id, [text], language_code)
 
-            if response_text:
+            if query_result.fulfillment_text:
                 vk_api.messages.send(
                     user_id=event.user_id,
-                    message=response_text,
+                    message=query_result.fulfillment_text,
                     random_id=random.randint(1, 1000000)
                 )
-            else:
-                vk_api.messages.send(
-                    user_id=event.user_id,
-                    message="Не совсем понял.",
-                    random_id=random.randint(1, 1000000)
-                )
+
         except Exception as e:
             bot_logger.exception("An error occurred while handling the message")
             vk_api.messages.send(
