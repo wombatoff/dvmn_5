@@ -1,8 +1,10 @@
+import random
+
 import logging
 import os
 from logging.handlers import TimedRotatingFileHandler
 
-import vk_api
+import vk_api as vk
 from vk_api.longpoll import VkLongPoll, VkEventType
 
 import telegram
@@ -43,6 +45,14 @@ def detect_intent_texts(env, project_id, session_id, texts, language_code):
         return response.query_result.fulfillment_text
 
 
+def echo(event, vk_api):
+    vk_api.messages.send(
+        user_id=event.user_id,
+        message=event.text,
+        random_id=random.randint(1,1000)
+    )
+
+
 def main():
     if not os.path.exists("logs"):
         os.makedirs("logs")
@@ -63,18 +73,12 @@ def main():
     smart_bot = telegram.Bot(token=telegram_token)
 
     vk_token = env.str("VK_TOKEN")
-    vk_session = vk_api.VkApi(token=vk_token)
-
+    vk_session = vk.VkApi(token=vk_token)
+    vk_api = vk_session.get_api()
     longpoll = VkLongPoll(vk_session)
-
     for event in longpoll.listen():
-        if event.type == VkEventType.MESSAGE_NEW:
-            print('Новое сообщение:')
-            if event.to_me:
-                print('Для меня от: ', event.user_id)
-            else:
-                print('От меня для: ', event.user_id)
-            print('Текст:', event.text)
+        if event.type == VkEventType.MESSAGE_NEW and event.to_me:
+            echo(event, vk_api)
 
     def handle_message(update, context):
         try:
