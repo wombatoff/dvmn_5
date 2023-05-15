@@ -10,9 +10,38 @@ Telegram и VK бот, который отвечает на вопросы
 - vk_api
 ---
 
+## Запуск проекта локально
+Клонировать репозиторий и перейти в него:
+```
+git clone https://github.com/wombatoff/dvmn_5
+cd dvmn_5
+```
+
+Создать и активировать виртуальное окружение, обновить pip и установить зависимости:
+```
+python -m venv venv
+source venv/Scripts/activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+Создать файл .env и заполнить его:
+```
+TELEGRAM_TOKEN=
+TELEGRAM_CHAT_ID=
+GOOGLE_APPLICATION_CREDENTIALS=
+GOOGLE_PROJECT_ID=
+VK_TOKEN=
+```
+
+Запустить бота:
+```
+python telegram_bot.py
+python vk_bot.py
+```
+
 
 ## Запуск проекта на сервере
-
 ### Подготовка сервера
 - Запустить сервер и подключиться к нему:
 ```
