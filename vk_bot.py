@@ -21,7 +21,7 @@ def handle_message_vk(env, event, vk_api):
         project_id = env.str('GOOGLE_PROJECT_ID')
         response_text = detect_intent_texts(env, project_id, session_id, text, language_code)
 
-        if response_text and response_text.fulfillment_text:
+        if response_text and not response_text.intent.is_fallback:
             vk_api.messages.send(
                 user_id=event.user_id,
                 message=response_text.fulfillment_text,

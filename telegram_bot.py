@@ -19,7 +19,7 @@ def handle_message_tl(env, update, context):
         project_id = env.str('GOOGLE_PROJECT_ID')
         response_text = detect_intent_texts(env, project_id, session_id, text, language_code)
 
-        if response_text and response_text.fulfillment_text:
+        if response_text and not response_text.intent.is_fallback:
             context.bot.send_message(chat_id=update.effective_chat.id, text=response_text.fulfillment_text)
     except Exception as e:
         bot_logger.exception("An error occurred while handling the message")
