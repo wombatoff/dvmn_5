@@ -28,7 +28,6 @@ pip install -r requirements.txt
 Создать файл .env и заполнить его:
 ```
 TELEGRAM_TOKEN=
-TELEGRAM_CHAT_ID=
 GOOGLE_APPLICATION_CREDENTIALS=
 GOOGLE_PROJECT_ID=
 VK_TOKEN=
@@ -63,7 +62,6 @@ cd dvmn_5
 ```
 - Создать файл .env и заполнить его:
 ```
-TELEGRAM_TOKEN=
 TELEGRAM_CHAT_ID=
 GOOGLE_APPLICATION_CREDENTIALS=
 GOOGLE_PROJECT_ID=

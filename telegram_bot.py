@@ -2,11 +2,10 @@ import logging
 import os
 from logging.handlers import TimedRotatingFileHandler
 
-import telegram
 from environs import Env
 from telegram.ext import Updater, MessageHandler, Filters
 
-from common import TelegramLogsHandler, detect_intent_texts
+from dialogflow_interaction import detect_intent_texts
 
 bot_logger = logging.getLogger(__file__)
 
@@ -43,17 +42,6 @@ def main():
     env.read_env()
 
     telegram_token = env.str("TELEGRAM_TOKEN")
-    telegram_chat_id = env.int("TELEGRAM_CHAT_ID")
-    info_bot = telegram.Bot(token=telegram_token)
-
-    telegram_handler = TelegramLogsHandler(info_bot, telegram_chat_id)
-    telegram_handler.setFormatter(logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    ))
-    telegram_handler.setLevel(logging.ERROR)
-    bot_logger.addHandler(telegram_handler)
-    bot_logger.setLevel(logging.DEBUG)
 
     updater = Updater(token=telegram_token, use_context=True)
     dispatcher = updater.dispatcher

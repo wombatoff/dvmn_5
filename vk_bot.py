@@ -7,7 +7,7 @@ import vk_api as vk
 from environs import Env
 from vk_api.longpoll import VkLongPoll, VkEventType
 
-from common import detect_intent_texts
+from dialogflow_interaction import detect_intent_texts
 
 bot_logger = logging.getLogger(__file__)
 
